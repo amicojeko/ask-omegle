@@ -1,0 +1,9 @@
+GEM
+  specs:
+    json (1.6.3)
+
+PLATFORMS
+  ruby
+
+DEPENDENCIES
+  json
