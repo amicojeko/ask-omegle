@@ -1,8 +1,6 @@
 require './omegle'
 require 'logger'
 
-class StrangerDisconnected < Exception; end
-
 class Question
   attr_reader :text, :choices
 
@@ -46,7 +44,6 @@ class AskOmegle
 
       omegle.listen do |event|
         logger.debug event.inspect
-        raise StrangerDisconnected.new if event.include? ["strangerDisconnected"]
         remote_messages = event.collect do |e|
           e if e.first == "gotMessage"
         end.compact.collect {|e| e.last}
@@ -59,17 +56,20 @@ class AskOmegle
         # bisogna anche introdurre un timeout
 
         # input da tastiera da console: usato per il debug
-        message = gets.chomp
+        #message = gets.chomp
         # puts message
 
-        if message
-          omegle.typing
-          omegle.send message
-          omegle.stopped_typing
-        end
+        # if message
+        #   omegle.typing
+        #   omegle.send message
+        #   omegle.stopped_typing
+        # end
 
         remote_messages = ''
         message = false
+
+        return false if event.include? ["strangerDisconnected"]
+
       end
     end
   end
@@ -83,7 +83,5 @@ omegle.logger.debug "question text: #{q.text}"
 q.ordered_choices.each {|c| omegle.logger.debug c}
 
 begin
-  omegle.ask(q)
-rescue StrangerDisconnected
-  omegle.ask(q)
-end
+  result = omegle.ask(q)
+end while result == false
