@@ -1,6 +1,6 @@
 GEM
   specs:
-    json (1.6.3)
+    json (1.6.4)
 
 PLATFORMS
   ruby
