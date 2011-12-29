@@ -1,8 +1,6 @@
 require './omegle'
 require 'logger'
 
-class StrangerDisconnected < Exception; end
-
 class Question
   attr_reader :text, :choices
 
@@ -12,9 +10,8 @@ class Question
   end
 
   def ordered_choices
-    letters = ('a'..'z').to_a
     choices.inject([]) do |acc, val|
-      acc << "#{letters[acc.size]}) #{val}"
+      acc << "#{acc.size}) #{val}"
     end
   end
 end
@@ -46,44 +43,51 @@ class AskOmegle
 
       omegle.listen do |event|
         logger.debug event.inspect
-        raise StrangerDisconnected.new if event.include? ["strangerDisconnected"]
-        remote_messages = event.collect do |e|
+        remote_messages = event.select do |e|
           e if e.first == "gotMessage"
-        end.compact.collect {|e| e.last}
+        end.collect {|e| e.last}
 
         logger.debug remote_messages.inspect
 
+        remote_messages.each do |msg|
+          logger.info msg
+          return false if msg =~ /\d/
+        end
         # qui va trappata la risposta, bisogna capire se ha risposto una delle lettere possibili,
         # in caso positivo ringraziare e chiudere la conversazione,
         # in caso negativo chiedere di rispondere solo con una delle alternative possibili
         # bisogna anche introdurre un timeout
 
         # input da tastiera da console: usato per il debug
-        message = gets.chomp
+        #message = gets.chomp
         # puts message
 
-        if message
-          omegle.typing
-          omegle.send message
-          omegle.stopped_typing
-        end
+        # if message
+        #   omegle.typing
+        #   omegle.send message
+        #   omegle.stopped_typing
+        # end
 
         remote_messages = ''
         message = false
+
+        return false if event.include? ["strangerDisconnected"]
+
       end
     end
   end
 end
 
-omegle = AskOmegle.new(Logger::DEBUG)
+omegle = AskOmegle.new
 
-q = Question.new("I'm a bot, i was born today. I was programmed by a lazy guy that has an ugly job and wants me to do polls in his place, so the question is: which is the worst of 2011", ["justin bieber", "rebecca black", "the twilight movies"])
+question_text =<<-EOF
+Hi, I'm a bot, an AI if you will, and I was born today. I was programmed by a lazy guy that has an ugly job, and he programmed me to ask you a simple question: which is the worst of 2011? Please answers just with the number representing your choice, I'm still not very good at understanding humans.
+EOF
+q = Question.new(question_text, ["justin bieber", "rebecca black", "the twilight movies"])
 omegle.logger.debug "question initialized"
 omegle.logger.debug "question text: #{q.text}"
 q.ordered_choices.each {|c| omegle.logger.debug c}
 
 begin
-  omegle.ask(q)
-rescue StrangerDisconnected
-  omegle.ask(q)
-end
+  result = omegle.ask(q)
+end while result == false
