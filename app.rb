@@ -44,6 +44,8 @@ class AskOmegle
         omegle.stopped_typing
       end
 
+      R.incr "omegle:questions_asked"
+
       omegle.listen do |event|
         logger.debug event.inspect
         remote_messages = event.select do |e|
@@ -57,15 +59,24 @@ class AskOmegle
           no_thanks = ["Just the number on a single line, please. Help me :)",
             "please, just a single number o a single line, I'll be thankful forever",
             "just one number please?"].sample
+          correct = "Just a number between 1 and #{question.choices.size}, please?"
 
           logger.info msg
           if result = msg.strip.match(/^\d$/)
-            omegle.typing
-            omegle.send thanks
-            logger.info thanks
-            omegle.stopped_typing
-            R.zincrby "omegle:results", 1, question.choices[result[0].to_i - 1]
-            return false
+            if result[0].to_i <= question.choices.size
+              omegle.typing
+              omegle.send thanks
+              logger.info thanks
+              omegle.stopped_typing
+              R.incr "omegle:questions_answered"
+              R.zincrby "omegle:results", 1, question.choices[result[0].to_i - 1]
+              return :restart
+            else
+              omegle.typing
+              omegle.send correct
+              logger.info correct
+              omegle.stopped_typing
+            end
           else
             omegle.typing
             omegle.send no_thanks
@@ -91,8 +102,7 @@ class AskOmegle
         remote_messages = ''
         message = false
 
-        return false if event.include? ["strangerDisconnected"]
-        true
+        return :restart if event.include? ["strangerDisconnected"]
       end
     end
   end
@@ -110,4 +120,5 @@ q.ordered_choices.each {|c| omegle.logger.debug c}
 
 begin
   result = omegle.ask(q)
-end while result == false
+end while true
+omegle.logger.debug "EXITING with #{result.inspect}"
