@@ -44,6 +44,8 @@ class AskOmegle
         omegle.stopped_typing
       end
 
+      R.incr "omegle:questions_asked"
+
       omegle.listen do |event|
         logger.debug event.inspect
         remote_messages = event.select do |e|
@@ -66,6 +68,7 @@ class AskOmegle
               omegle.send thanks
               logger.info thanks
               omegle.stopped_typing
+              R.incr "omegle:questions_answered"
               R.zincrby "omegle:results", 1, question.choices[result[0].to_i - 1]
               return :restart
             else
@@ -117,5 +120,5 @@ q.ordered_choices.each {|c| omegle.logger.debug c}
 
 begin
   result = omegle.ask(q)
-end while result == :restart || result.is_a?(Net::HTTP) # I don't understand yet why this second condition is necessary to keep it looping
+end while true
 omegle.logger.debug "EXITING with #{result.inspect}"
