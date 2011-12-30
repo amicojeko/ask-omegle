@@ -1,9 +1,18 @@
+GIT
+  remote: https://github.com/ezmobius/redis-rb.git
+  revision: 168a0ac326998c4eb22235213229e0341c57086e
+  specs:
+    redis (2.2.2)
+
 GEM
   specs:
+    hiredis (0.4.3)
     json (1.6.4)
 
 PLATFORMS
   ruby
 
 DEPENDENCIES
+  hiredis
   json
+  redis!
